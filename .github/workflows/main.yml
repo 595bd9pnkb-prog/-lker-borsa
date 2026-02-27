@@ -1,0 +1,35 @@
+name: ABD Borsa Analizi
+
+on:
+  schedule:
+    - cron: '0 14 * * 1-5' # Hafta içi her gün TSİ 17:00
+  workflow_dispatch: # İstediğin zaman manuel çalıştırmak için düğme ekler
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodlari cek
+        uses: actions/checkout@v3
+
+      - name: Python kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Kutuphaneleri yukle
+        run: pip install -r requirements.txt
+
+      - name: Botu calistir
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python borsa_bot.py
+
+      - name: Performans verisini kaydet
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add performans.json
+          git commit -m "Performans verisi guncellendi" || echo "Degisiklik yok"
+          git push
