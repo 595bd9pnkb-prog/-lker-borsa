@@ -20,7 +20,7 @@ def get_vix_status():
 def piyasa_avcisi():
     dev_liste = [
         "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "COST", "AMD",
-        "NFLX", "PLTR", "UBER", "COIN", "SHOP", "SNOW", "JPM", "V", "MA", "DIS"
+        "NFLX", "PLTR", "UBER", "COIN", "SHOP", "SNOW", "JPM", "V", "MA", "DIS", "ONDS", "RKLB", "IREN"
     ]
     firsatlar = []
     tum_fiyatlar = {}
