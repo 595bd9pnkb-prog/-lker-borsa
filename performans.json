@@ -1,8 +1,1 @@
-      - name: Performans verisini kaydet
-        run: |
-          git config --global user.name 'GitHub Action'
-          git config --global user.email 'action@github.com'
-          git add performans.json
-          git commit -m "Performans verisi güncellendi" || echo "Değişiklik yok"
-          git push
-
+{}
