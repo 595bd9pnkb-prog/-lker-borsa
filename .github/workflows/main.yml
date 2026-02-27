@@ -2,7 +2,7 @@ name: ABD Borsa Analizi
 
 on:
   schedule:
-    - cron: '0 14 * * 1-5' # Hafta içi her gün TSİ 17:00
+    - cron: '0 14 * * 1-5' # Hafta içi her gün TSİ 19:00
   workflow_dispatch: # İstediğin zaman manuel çalıştırmak için düğme ekler
 
 jobs:
