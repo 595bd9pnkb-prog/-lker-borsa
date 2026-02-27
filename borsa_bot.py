@@ -14,25 +14,8 @@ def get_vix_status():
         vix = TA_Handler(symbol="VIX", screener="cfd", exchange="CBOE", interval=Interval.INTERVAL_1_DAY)
         v = vix.get_analysis().indicators['close']
         emoji = "🟢" if v < 20 else "🟡" if v < 25 else "🔴"
-        return f"{emoji} *VIX (Korku Endeksi): {v:.2f}*\n"
+        return f"{emoji} *VIX (Korku): {v:.2f}*\n"
     except: return ""
-
-def performans_hesapla(yeni_fiyatlar):
-    """Dünkü hisselerin bugünkü kâr/zarar durumunu hesaplar."""
-    if not os.path.exists(DB_FILE):
-        return "📊 _İlk çalışma: Henüz karşılaştırılacak dünkü veri yok._\n\n"
-    
-    with open(DB_FILE, "r") as f:
-        eski_veriler = json.load(f)
-    
-    rapor = "📈 *Dünkü Sinyallerin Performansı:*\n"
-    for sembol, eski_fiyat in eski_veriler.items():
-        if sembol in yeni_fiyatlar:
-            guncel_fiyat = yeni_fiyatlar[sembol]
-            degisim = ((guncel_fiyat - eski_fiyat) / eski_fiyat) * 100
-            emoji = "🚀" if degisim > 0 else "📉"
-            rapor += f"{emoji} {sembol}: %{degisim:+.2f}\n"
-    return rapor + "\n"
 
 def piyasa_avcisi():
     dev_liste = [
@@ -40,7 +23,7 @@ def piyasa_avcisi():
         "NFLX", "PLTR", "UBER", "COIN", "SHOP", "SNOW", "JPM", "V", "MA", "DIS"
     ]
     firsatlar = []
-    tum_fiyatlar = {} # Performans takibi için tüm güncel fiyatlar
+    tum_fiyatlar = {}
 
     for sembol in dev_liste:
         try:
@@ -53,8 +36,20 @@ def piyasa_avcisi():
             fiyat = analiz.indicators['close']
             tum_fiyatlar[sembol] = fiyat
             
-            if analiz.summary['RECOMMENDATION'] == "STRONG_BUY" and analiz.indicators['RSI'] < 75:
-                firsatlar.append({"sembol": sembol, "skor": analiz.summary['BUY'], "rsi": analiz.indicators['RSI'], "fiyat": fiyat})
+            # KRİTER: Strong Buy ve Makul RSI
+            if analiz.summary['RECOMMENDATION'] == "STRONG_BUY" and analiz.indicators['RSI'] < 70:
+                # STRATEJİ HESAPLAMA:
+                # Stop Loss: %3 altı | Kar Al: %7 üstü (Muhafazakar Swing Trade)
+                stop_loss = fiyat * 0.97
+                kar_al = fiyat * 1.07
+                
+                firsatlar.append({
+                    "sembol": sembol,
+                    "fiyat": fiyat,
+                    "sl": stop_loss,
+                    "tp": kar_al,
+                    "skor": analiz.summary['BUY']
+                })
         except: continue
             
     return sorted(firsatlar, key=lambda x: x['skor'], reverse=True)[:10], tum_fiyatlar
@@ -64,28 +59,29 @@ async def main():
     
     vix = get_vix_status()
     firsatlar, guncel_fiyatlar = piyasa_avcisi()
-    performans_raporu = performans_hesapla(guncel_fiyatlar)
     
-    # Yeni fiyatları bir sonraki gün için kaydet
+    # Yeni fiyatları kaydet
     with open(DB_FILE, "w") as f:
         json.dump(guncel_fiyatlar, f)
     
-    mesaj = "🚀 *WALL STREET AVCI RAPORU* 🚀\n\n"
-    mesaj += performans_raporu
-    mesaj += "----------------------------------\n"
+    mesaj = "🚀 *STRATEJİK ALIM SİNYALLERİ* 🚀\n"
     mesaj += f"{vix}\n"
-    mesaj += "*Günün En Güçlü Sinyalleri:*\n"
     
     if not firsatlar:
-        mesaj += "⚠️ Uygun fırsat bulunamadı."
+        mesaj += "⚠️ Uygun kriterde fırsat bulunamadı."
     else:
         for f in firsatlar:
-            mesaj += f"💎 *{f['sembol']}* | `${f['fiyat']:.2f}`\n   Güven: `{f['skor']}/26` | RSI: {f['rsi']:.1f}\n"
+            mesaj += f"💎 *{f['sembol']}*\n"
+            mesaj += f"   📥 Giriş: `${f['fiyat']:.2f}`\n"
+            mesaj += f"   🎯 Hedef (TP): `${f['tp']:.2f}` (+%7)\n"
+            mesaj += f"   🛡️ Durdur (SL): `${f['sl']:.2f}` (-%3)\n"
+            mesaj += f"   📊 Güven: `{f['skor']}/26` Analiz Onayı\n\n"
 
     bot = Bot(token=TELEGRAM_TOKEN)
     await bot.send_message(chat_id=CHAT_ID, text=mesaj, parse_mode='Markdown')
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
